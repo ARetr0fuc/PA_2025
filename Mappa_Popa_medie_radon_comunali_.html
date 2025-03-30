@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PA2025</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Aggiungere il JavaScript di Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Aggiungere il supporto per i layer ESRI -->
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+
+    <!-- Stili CSS -->
+    <style>
+        /* Stile generale per il corpo della pagina */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Stile per il titolo */
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            color: #333;
+            margin-top: 30px;
+        }
+
+        /* Contenitore della mappa */
+        #map {
+            height: 600px; /* Aumentato per una mappa più grande */
+            width: 90%; /* Aumentato per una mappa più larga */
+            margin: 30px auto;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Contenitore principale */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Stile per i pulsanti */
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Effetto hover sui pulsanti */
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px); /* Effetto leggero di spinta verso l'alto */
+        }
+
+        /* Effetto quando il bottone viene premuto */
+        button:active {
+            background-color: #003d80;
+            transform: translateY(2px); /* Effetto di pressione */
+        }
+
+        /* Sezione documentazione */
+        .documentation {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .documentation h2 {
+            color: #333;
+            font-size: 2em;
+        }
+
+        .documentation p {
+            font-size: 1.1em;
+            color: #555;
+        }
+
+        .documentation a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .documentation a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+
+<body>
+    <h1>PORTE APERTE 2025</h1>
+
+    <div class="container">
+        <!-- Mappa -->
+        <div id="map"></div>
+
+        <!-- Contenitore per i pulsanti -->
+        <div class="button-container">
+            <button onclick="inserisciMedie()">MEDIE RADON COMUNALI</button>
+            <button onclick="pulisciMappa()">PULISCI MAPPA</button>
+        </div>
+
+        <!-- Sezione documentazione -->
+        <div class="documentation">
+            <h2>GeoDato</h2>
+            <p><strong>Medie Radon comunali, aree prioritarie e Urban Health</strong></p>
+            <p><strong>Mappa regionale delle concentrazioni medie di attività radon normalizzate al piano terra</strong></p>
+            <p><em>Meno informazioni</em></p>
+            <p>In Italia le prime campagne di misura radon risalgono al 1990, anno in cui si è svolta in Piemonte la 'Campagna Nazionale', promossa da ISPRA (allora ANPA) e dall'ISS (Istituto Superiore di Sanità) e volta a determinare la concentrazione media regionale nelle abitazioni.</p>
+            <p>Per la descrizione completa si rimanda alla <a href="https://www.arpa.piemonte.it/web/guest/radon" target="_blank">scheda metadati</a>.</p>
+            <h3>LICENZA</h3>
+            <p>Licenza Creative Commons Attribuzione 4.0 Internazionale (attribuzione: Arpa Piemonte - Geoportale), salvo dove diversamente specificato.</p>
+            <p><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Testo integrale della licenza</a></p>
+        </div>
+    </div>
+
+    <script>
+        console.log("Inizio codice javascript");
+
+        // Inizializza la mappa
+        var map = L.map('map').setView([45.078869, 7.6558], 8);
+
+        console.log("Aggiungere la mappa di base");
+        // Aggiungi il layer di base (OpenStreetMap)
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // URL del MapServer per le medie del Radon comunali
+        var urlMapServer_medie_del_Radon_comunali = "https://webgis.arpa.piemonte.it/server/rest/services/radioattivita/Medie_comunali_radon/MapServer";
+
+        // Creazione del layer dinamico ESRI, ma senza aggiungerlo subito alla mappa
+        var layerMedie = L.esri.dynamicMapLayer({
+            url: urlMapServer_medie_del_Radon_comunali
+        });
+
+        // Funzione per aggiungere il layer alla mappa
+        function inserisciMedie() {
+            console.log("Aggiungi le Medie Radon Comunali");
+            // Aggiungi il layer alla mappa solo quando l'utente clicca sul bottone
+            layerMedie.addTo(map);
+        }
+
+        // Funzione per rimuovere il layer dalla mappa
+        function pulisciMappa() {
+            console.log("Rimuovi il layer Medie Radon Comunali");
+            // Rimuovi il layer dalla mappa
+            map.removeLayer(layerMedie);
+        }
+
+    </script>
+</body>
+
+</html>
